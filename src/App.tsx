@@ -1,90 +1,78 @@
 import {
   useActionState,
   useDeferredValue,
-  useEffect,
   useId,
   useMemo,
   useOptimistic,
-  useReducer,
   useState,
   useTransition
 } from "react";
-import type { Goal, Subgoal } from "./data/types";
 import "./styles/app.css";
+
+type Lesson = {
+  id: string;
+  title: string;
+  summary: string;
+  tag: string;
+};
 
 type FormState = {
   status: "idle" | "saving" | "success" | "error";
   message: string;
 };
 
-type CompletionAction =
-  | { type: "toggle"; goalId: string; subgoalId: string }
-  | { type: "reset"; goalId: string };
+type OptimisticLessonAction = {
+  type: "add";
+  lesson: Lesson;
+};
 
-type CompletionState = Record<string, Record<string, boolean>>;
-
-type OptimisticAction = { type: "add"; goal: Goal };
+const initialLessons: Lesson[] = [
+  {
+    id: "lesson-1",
+    title: "Async UI Actions",
+    summary: "Handle forms with server-like mutations and instant feedback.",
+    tag: "useActionState"
+  },
+  {
+    id: "lesson-2",
+    title: "Optimistic Lists",
+    summary: "Show updates immediately while work finishes in the background.",
+    tag: "useOptimistic"
+  },
+  {
+    id: "lesson-3",
+    title: "Concurrent Filtering",
+    summary: "Keep typing responsive while the UI recalculates results.",
+    tag: "useTransition"
+  },
+  {
+    id: "lesson-4",
+    title: "Stable Form IDs",
+    summary: "Generate consistent IDs for accessible labels and controls.",
+    tag: "useId"
+  }
+];
 
 const formInitialState: FormState = {
   status: "idle",
   message: ""
 };
 
-const completionReducer = (state: CompletionState, action: CompletionAction): CompletionState => {
-  switch (action.type) {
-    case "toggle": {
-      const goalState = state[action.goalId] ?? {};
-      return {
-        ...state,
-        [action.goalId]: {
-          ...goalState,
-          [action.subgoalId]: !goalState[action.subgoalId]
-        }
-      };
-    }
-    case "reset": {
-      const updated = { ...state };
-      delete updated[action.goalId];
-      return updated;
-    }
-  }
-};
-
-const createOptimisticGoal = (id: string, title: string, summary: string): Goal => ({
-  id,
-  title,
-  summary,
-  theme: "Custom",
-  momentum: 42,
-  streakWeeks: 1,
-  cheers: 0,
-  badges: [
-    { level: "easy", label: "Fresh Start", points: 20 },
-    { level: "medium", label: "Momentum Rise", points: 55 },
-    { level: "hard", label: "Legend Status", points: 120 }
-  ],
-  subgoals: [
-    { id: `opt-${crypto.randomUUID()}-1`, title: "Name the first milestone", difficulty: "easy", points: 15 },
-    { id: `opt-${crypto.randomUUID()}-2`, title: "Schedule a practice block", difficulty: "medium", points: 35 },
-    { id: `opt-${crypto.randomUUID()}-3`, title: "Celebrate a small win", difficulty: "hard", points: 55 }
-  ]
-});
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export default function App() {
-  const [goals, setGoals] = useState<Goal[]>([]);
-  const [expandedGoals, setExpandedGoals] = useState<Set<string>>(new Set());
+  const [lessons, setLessons] = useState<Lesson[]>(initialLessons);
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query);
   const [isPending, startTransition] = useTransition();
-  const [completionState, dispatchCompletion] = useReducer(completionReducer, {});
 
-  const [optimisticGoals, addOptimisticGoal] = useOptimistic(
-    goals,
-    (state: Goal[], action: OptimisticAction): Goal[] => {
-      if (state.some((goal) => goal.id === action.goal.id)) {
+  const [optimisticLessons, addOptimisticLesson] = useOptimistic(
+    lessons,
+    (state: Lesson[], action: OptimisticLessonAction) => {
+      if (state.some((lesson) => lesson.id === action.lesson.id)) {
         return state;
       }
-      return [action.goal, ...state];
+      return [action.lesson, ...state];
     }
   );
 
@@ -92,263 +80,175 @@ export default function App() {
     async (_prevState: FormState, formData: FormData): Promise<FormState> => {
       const title = String(formData.get("title") ?? "").trim();
       const summary = String(formData.get("summary") ?? "").trim();
-      const theme = String(formData.get("theme") ?? "").trim();
+      const tag = String(formData.get("tag") ?? "").trim();
 
       if (!title || !summary) {
-        return { status: "error", message: "Add a title and summary to launch a goal." };
+        return { status: "error", message: "Add a title and summary to create a lesson." };
       }
 
-      const clientId = `goal-${crypto.randomUUID()}`;
-      const optimistic = createOptimisticGoal(clientId, title, summary);
-      addOptimisticGoal({ type: "add", goal: optimistic });
+      const newLesson: Lesson = {
+        id: `lesson-${crypto.randomUUID()}`,
+        title,
+        summary,
+        tag: tag || "React 19"
+      };
 
-      try {
-        const response = await fetch("/api/goals", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title, summary, theme: theme || undefined, clientId })
-        });
+      addOptimisticLesson({ type: "add", lesson: newLesson });
 
-        if (!response.ok) {
-          throw new Error("Failed to save goal.");
-        }
+      await wait(800);
+      setLessons((prev) => [newLesson, ...prev]);
 
-        const data = (await response.json()) as { goal: Goal };
-        setGoals((prev) => [data.goal, ...prev]);
-        return { status: "success", message: "Goal added to your 2026 library." };
-      } catch {
-        return { status: "error", message: "Could not save goal. Try again soon." };
-      }
+      return { status: "success", message: "Lesson added to the demo catalog." };
     },
     formInitialState
   );
 
-  const loadGoals = async () => {
-    const response = await fetch("/api/goals");
-    const data = (await response.json()) as { goals: Goal[] };
-    setGoals(data.goals);
-  };
-
-  useEffect(() => {
-    void loadGoals();
-  }, []);
-
-  const toggleExpand = (goalId: string) => {
-    setExpandedGoals((prev) => {
-      const next = new Set(prev);
-      if (next.has(goalId)) {
-        next.delete(goalId);
-      } else {
-        next.add(goalId);
-      }
-      return next;
-    });
-  };
-
-  const handleCheer = async (goalId: string) => {
-    const response = await fetch("/api/cheer", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ goalId })
-    });
-
-    if (response.ok) {
-      const data = (await response.json()) as { cheers: number };
-      setGoals((prev) =>
-        prev.map((goal) => (goal.id === goalId ? { ...goal, cheers: data.cheers } : goal))
-      );
-    }
-  };
-
-  const visibleGoals = useMemo(() => {
+  const filteredLessons = useMemo(() => {
     if (!deferredQuery) {
-      return optimisticGoals;
+      return optimisticLessons;
     }
 
     const lowered = deferredQuery.toLowerCase();
-    return optimisticGoals.filter((goal) =>
-      [goal.title, goal.summary, goal.theme].some((text) => text.toLowerCase().includes(lowered))
+    return optimisticLessons.filter((lesson) =>
+      [lesson.title, lesson.summary, lesson.tag].some((value) =>
+        value.toLowerCase().includes(lowered)
+      )
     );
-  }, [deferredQuery, optimisticGoals]);
+  }, [deferredQuery, optimisticLessons]);
 
-  const totalPoints = useMemo(() => {
-    return optimisticGoals.reduce((total, goal) => {
-      const completed = completionState[goal.id] ?? {};
-      const points = goal.subgoals.reduce((sum, subgoal) => {
-        return completed[subgoal.id] ? sum + subgoal.points : sum;
-      }, 0);
-      return total + points;
-    }, 0);
-  }, [completionState, optimisticGoals]);
-
-  const missionId = useId();
+  const titleId = useId();
+  const summaryId = useId();
+  const tagId = useId();
+  const searchId = useId();
 
   return (
     <div className="page">
       <header className="hero">
         <div>
-          <p className="eyebrow">GoalForge 2026 Library</p>
-          <h1>Level up your New Year with a gamified goal archive.</h1>
+          <p className="eyebrow">React 19 Feature Studio</p>
+          <h1>Explore the new React 19 primitives through tiny, live demos.</h1>
           <p className="subtitle">
-            Track momentum, unlock badges, and reveal quest subgoals for every challenge you
-            choose.
+            Each card below demonstrates a React 19 feature, plus a short explanation to make the
+            behavior easy to teach in a workshop or classroom.
           </p>
         </div>
         <div className="hero-card">
           <div>
-            <p className="hero-label">Total XP</p>
-            <p className="hero-metric">{totalPoints}</p>
-            <p className="hero-note">From completed subgoals</p>
+            <p className="hero-label">Lessons</p>
+            <p className="hero-metric">{optimisticLessons.length}</p>
+            <p className="hero-note">Interactive examples in the catalog</p>
           </div>
           <div>
-            <p className="hero-label">Active Goals</p>
-            <p className="hero-metric">{optimisticGoals.length}</p>
-            <p className="hero-note">Curated for 2026</p>
+            <p className="hero-label">Filtered</p>
+            <p className="hero-metric">{filteredLessons.length}</p>
+            <p className="hero-note">Matches for the current search</p>
           </div>
         </div>
       </header>
 
-      <section className="panel">
-        <div className="panel-header">
-          <div>
-            <h2>Launch a new goal</h2>
-            <p className="muted">Add a fresh quest and auto-generate starter subgoals.</p>
-          </div>
-          <span className={`status-chip ${formState.status}`}>{formState.message}</span>
-        </div>
+      <section className="demo-grid">
+        <article className="demo-card">
+          <header>
+            <h2>Action State + Forms</h2>
+            <span className={`status-chip ${formState.status}`}>{formState.message || "Idle"}</span>
+          </header>
+          <p className="muted">
+            This demo uses <strong>useActionState</strong> to run async form logic without manual
+            loading flags. React manages the pending and result state so the UI can show a clear
+            status message as the action resolves.
+          </p>
+          <form className="lesson-form" action={formAction}>
+            <label htmlFor={titleId}>Lesson title</label>
+            <input id={titleId} name="title" placeholder="Example: Form Actions" />
+            <label htmlFor={summaryId}>Summary</label>
+            <textarea
+              id={summaryId}
+              name="summary"
+              rows={3}
+              placeholder="Describe the lesson in one sentence"
+            />
+            <label htmlFor={tagId}>Tag</label>
+            <input id={tagId} name="tag" placeholder="React 19" />
+            <button className="primary" type="submit" disabled={isSaving}>
+              {isSaving ? "Saving..." : "Add lesson"}
+            </button>
+          </form>
+        </article>
 
-        <form className="goal-form" action={formAction}>
-          <label htmlFor={missionId}>Goal title</label>
-          <input id={missionId} name="title" placeholder="Ex: Build a sunrise run habit" />
-          <label htmlFor={`${missionId}-summary`}>Goal summary</label>
-          <textarea
-            id={`${missionId}-summary`}
-            name="summary"
-            placeholder="Describe the motivation and reward"
-            rows={3}
-          />
-          <label htmlFor={`${missionId}-theme`}>Theme</label>
-          <input id={`${missionId}-theme`} name="theme" placeholder="Movement, Learning, Creativity" />
-          <button className="primary" type="submit" disabled={isSaving}>
-            {isSaving ? "Launching..." : "Launch goal"}
-          </button>
-        </form>
-      </section>
+        <article className="demo-card">
+          <header>
+            <h2>Optimistic UI</h2>
+            <span className="pill">useOptimistic</span>
+          </header>
+          <p className="muted">
+            The list below renders from <strong>useOptimistic</strong>, so new lessons appear
+            instantly even while the simulated save runs. When the save finishes, the real state
+            catches up automatically.
+          </p>
+          <ul className="lesson-list">
+            {optimisticLessons.slice(0, 5).map((lesson) => (
+              <li key={lesson.id}>
+                <div>
+                  <p className="lesson-title">{lesson.title}</p>
+                  <p className="muted">{lesson.summary}</p>
+                </div>
+                <span className="pill">{lesson.tag}</span>
+              </li>
+            ))}
+          </ul>
+        </article>
 
-      <section className="panel">
-        <div className="panel-header">
-          <div>
-            <h2>2026 Goal Library</h2>
-            <p className="muted">Tap a goal to reveal subgoals, badges, and progress tools.</p>
-          </div>
+        <article className="demo-card">
+          <header>
+            <h2>Deferred Search</h2>
+            <span className="pill">useDeferredValue</span>
+          </header>
+          <p className="muted">
+            Typing updates the input immediately, but the expensive filter waits for the deferred
+            value. This keeps typing smooth when lists are large, while showing a “Filtering...”
+            indicator via <strong>useTransition</strong>.
+          </p>
           <div className="search">
+            <label className="sr-only" htmlFor={searchId}>
+              Search lessons
+            </label>
             <input
+              id={searchId}
               value={query}
               onChange={(event) => startTransition(() => setQuery(event.target.value))}
-              placeholder="Search goals"
-              aria-label="Search goals"
+              placeholder="Search lessons"
             />
-            {isPending && <span className="pending">Refreshing...</span>}
+            {isPending && <span className="pending">Filtering...</span>}
           </div>
-        </div>
+          <div className="result-count">
+            Showing {filteredLessons.length} / {optimisticLessons.length} lessons
+          </div>
+        </article>
 
-        <div className="goal-grid">
-          {visibleGoals.map((goal) => {
-            const isExpanded = expandedGoals.has(goal.id);
-            const completion = completionState[goal.id] ?? {};
-            const completedCount = Object.values(completion).filter(Boolean).length;
-            return (
-              <article key={goal.id} className="goal-card">
-                <header>
-                  <div>
-                    <p className="tag">{goal.theme}</p>
-                    <h3>{goal.title}</h3>
-                    <p className="muted">{goal.summary}</p>
-                  </div>
-                  <button className="ghost" onClick={() => toggleExpand(goal.id)} type="button">
-                    {isExpanded ? "Hide details" : "Reveal details"}
-                  </button>
-                </header>
-
-                <div className="goal-meta">
-                  <div>
-                    <p className="hero-label">Momentum</p>
-                    <p className="hero-metric">{goal.momentum}%</p>
-                  </div>
-                  <div>
-                    <p className="hero-label">Streak</p>
-                    <p className="hero-metric">{goal.streakWeeks} wks</p>
-                  </div>
-                  <div>
-                    <p className="hero-label">Cheers</p>
-                    <p className="hero-metric">{goal.cheers}</p>
-                  </div>
-                </div>
-
-                <div className="badge-row">
-                  {goal.badges.map((badge) => (
-                    <span key={badge.label} className={`badge ${badge.level}`}>
-                      {badge.label} · {badge.points} XP
-                    </span>
-                  ))}
-                </div>
-
-                {isExpanded && (
-                  <div className="goal-details">
-                    <div className="subgoal-list">
-                      {goal.subgoals.map((subgoal) => (
-                        <SubgoalItem
-                          key={subgoal.id}
-                          goalId={goal.id}
-                          subgoal={subgoal}
-                          isComplete={completion[subgoal.id] ?? false}
-                          onToggle={() =>
-                            dispatchCompletion({ type: "toggle", goalId: goal.id, subgoalId: subgoal.id })
-                          }
-                        />
-                      ))}
-                    </div>
-                    <div className="goal-actions">
-                      <button className="ghost" type="button" onClick={() => handleCheer(goal.id)}>
-                        Send cheer 🎉
-                      </button>
-                      <button
-                        className="ghost"
-                        type="button"
-                        onClick={() => dispatchCompletion({ type: "reset", goalId: goal.id })}
-                      >
-                        Reset subgoals
-                      </button>
-                      <p className="muted">Completed {completedCount} / {goal.subgoals.length}</p>
-                    </div>
-                  </div>
-                )}
-              </article>
-            );
-          })}
-        </div>
+        <article className="demo-card">
+          <header>
+            <h2>Accessible IDs</h2>
+            <span className="pill">useId</span>
+          </header>
+          <p className="muted">
+            React 19 keeps <strong>useId</strong> stable across server and client rendering. That
+            means labels and inputs stay correctly linked without manual ID bookkeeping, making
+            forms more accessible by default.
+          </p>
+          <div className="id-preview">
+            <div>
+              <p className="hero-label">Generated IDs</p>
+              <p className="mono">{titleId}</p>
+              <p className="mono">{summaryId}</p>
+              <p className="mono">{tagId}</p>
+            </div>
+            <div>
+              <p className="hero-label">Current search</p>
+              <p className="mono">{deferredQuery || "No query yet"}</p>
+            </div>
+          </div>
+        </article>
       </section>
     </div>
-  );
-}
-
-type SubgoalProps = {
-  goalId: string;
-  subgoal: Subgoal;
-  isComplete: boolean;
-  onToggle: () => void;
-};
-
-function SubgoalItem({ subgoal, isComplete, onToggle }: SubgoalProps) {
-  return (
-    <label className={`subgoal ${isComplete ? "complete" : ""}`}>
-      <input type="checkbox" checked={isComplete} onChange={onToggle} />
-      <div>
-        <p>{subgoal.title}</p>
-        <span className={`chip ${subgoal.difficulty}`}>
-          {subgoal.difficulty} · {subgoal.points} XP
-        </span>
-      </div>
-    </label>
   );
 }
