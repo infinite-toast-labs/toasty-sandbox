@@ -167,28 +167,45 @@ import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
 			const driveSlider = document.querySelector('[data-drive-slider]');
 			const runLabel = document.querySelector('[data-run-label]');
 			const driveLabel = document.querySelector('[data-drive-label]');
+			const zipInput = document.getElementById('zip');
 
-				form?.addEventListener('submit', async (event) => {
-					event.preventDefault();
-					const data = new FormData(form);
-					const zip = (data.get('zip') ?? '').toString().trim();
+			const defaultRunMinutes = Number(runSlider?.value ?? 60);
+			const defaultDriveMinutes = Number(driveSlider?.value ?? 0);
+			const params = new URLSearchParams(window.location.search);
+
+			initializeFromQuery(params);
+
+			if (zipInput?.value) {
+				form?.requestSubmit();
+			}
+
+			form?.addEventListener('submit', async (event) => {
+				event.preventDefault();
+				const data = new FormData(form);
+				const zip = (data.get('zip') ?? '').toString().trim();
 
 				if (!/^\d{5}$/.test(zip)) {
 					showStatus('Please enter a valid 5-digit U.S. ZIP code.', 'error');
 					return;
 				}
 
+				syncQueryParams({
+					zip,
+					runDuration: Number(runSlider?.value ?? defaultRunMinutes),
+					driveDuration: Number(driveSlider?.value ?? defaultDriveMinutes),
+				});
+
 				showStatus('Looking up coordinates and time zone…', 'loading');
 				resultEl?.classList.add('hidden');
 
 				try {
-						const { location, latitude, longitude } = await fetchCoordinates(zip);
-						const { timezone, utcOffsetMinutes } = await fetchTimezone(latitude, longitude);
-						const day = getDayParts(timezone);
-						const eqTime = equationOfTime(day.dayOfYear);
-						const timezoneMeridian = (utcOffsetMinutes / 60) * 15;
-						const solarNoonMinutes = 720 - 4 * (longitude - timezoneMeridian) - eqTime;
-						const solarNoonDate = buildLocalDate(day, solarNoonMinutes, utcOffsetMinutes);
+					const { location, latitude, longitude } = await fetchCoordinates(zip);
+					const { timezone, utcOffsetMinutes } = await fetchTimezone(latitude, longitude);
+					const day = getDayParts(timezone);
+					const eqTime = equationOfTime(day.dayOfYear);
+					const timezoneMeridian = (utcOffsetMinutes / 60) * 15;
+					const solarNoonMinutes = 720 - 4 * (longitude - timezoneMeridian) - eqTime;
+					const solarNoonDate = buildLocalDate(day, solarNoonMinutes, utcOffsetMinutes);
 
 					displayResult({
 						location,
@@ -198,7 +215,7 @@ import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
 						solarNoonDate,
 						solarNoonMinutes,
 					});
-					showStatus('Calculated using today\'s date for that location.', 'success');
+					showStatus("Calculated using today's date for that location.", 'success');
 				} catch (error) {
 					const message = error instanceof Error ? error.message : 'Something went wrong.';
 					showStatus(message, 'error');
@@ -267,11 +284,11 @@ import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
 				return { ...parts, dayOfYear };
 			}
 
-				function equationOfTime(dayOfYear) {
-					const B = (2 * Math.PI * (dayOfYear - 81)) / 365;
-					// NOAA approximation in minutes (https://gml.noaa.gov/grad/solcalc/solareqns.PDF)
-					return 9.87 * Math.sin(2 * B) - 7.53 * Math.cos(B) - 1.5 * Math.sin(B);
-				}
+			function equationOfTime(dayOfYear) {
+				const B = (2 * Math.PI * (dayOfYear - 81)) / 365;
+				// NOAA approximation in minutes (https://gml.noaa.gov/grad/solcalc/solareqns.PDF)
+				return 9.87 * Math.sin(2 * B) - 7.53 * Math.cos(B) - 1.5 * Math.sin(B);
+			}
 
 			function buildLocalDate(day, minutesFromMidnight, utcOffsetMinutes) {
 				const midnightUtc = Date.UTC(day.year, day.month - 1, day.day, 0, -utcOffsetMinutes);
@@ -325,6 +342,11 @@ import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
 					const runMinutes = Number(runSlider?.value ?? 60);
 					const driveMinutes = Number(driveSlider?.value ?? 0);
 
+					syncQueryParams({
+						runDuration: runMinutes,
+						driveDuration: driveMinutes,
+					});
+
 					if (runLabel) runLabel.textContent = `${runMinutes} min`;
 					if (driveLabel) driveLabel.textContent = `${driveMinutes} min`;
 
@@ -359,8 +381,55 @@ import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
 				statusEl.dataset.intent = intent;
 			}
 
+			function initializeFromQuery(searchParams) {
+				const queryZip = searchParams.get('zip');
+				if (zipInput && queryZip) {
+					zipInput.value = queryZip;
+				}
+
+				const runDuration = parseInt(searchParams.get('runDuration') ?? '', 10);
+				if (runSlider && Number.isFinite(runDuration)) {
+					runSlider.value = clampToRange(runDuration, Number(runSlider.min), Number(runSlider.max)).toString();
+				}
+
+				const driveDuration = parseInt(searchParams.get('driveDuration') ?? '', 10);
+				if (driveSlider && Number.isFinite(driveDuration)) {
+					driveSlider.value = clampToRange(driveDuration, Number(driveSlider.min), Number(driveSlider.max)).toString();
+				}
+			}
+
+			function syncQueryParams({ zip, runDuration, driveDuration } = {}) {
+				const nextParams = new URLSearchParams(window.location.search);
+
+				if (zip) {
+					nextParams.set('zip', zip);
+				} else {
+					nextParams.delete('zip');
+				}
+
+				if (Number.isFinite(runDuration) && runDuration !== defaultRunMinutes) {
+					nextParams.set('runDuration', runDuration.toString());
+				} else {
+					nextParams.delete('runDuration');
+				}
+
+				if (Number.isFinite(driveDuration) && driveDuration !== defaultDriveMinutes) {
+					nextParams.set('driveDuration', driveDuration.toString());
+				} else {
+					nextParams.delete('driveDuration');
+				}
+
+				const query = nextParams.toString();
+				const url = query ? `${window.location.pathname}?${query}` : window.location.pathname;
+				window.history.replaceState({}, '', url);
+			}
+
 			function addMinutes(date, minutes) {
 				return new Date(date.getTime() + minutes * 60 * 1000);
+			}
+
+			function clampToRange(value, min, max) {
+				return Math.min(max, Math.max(min, value));
 			}
 
 			function formatTime(date, timeZone) {
