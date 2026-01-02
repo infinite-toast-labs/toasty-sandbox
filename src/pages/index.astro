@@ -139,11 +139,11 @@ import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
 						to find the moment the sun crosses your meridian.
 					</li>
 				</ol>
-				<p class="muted">
-					Times are computed for today's date in the target location. Atmospheric refraction and
-					terrain are not considered, but the result is accurate for empirical noon to within about a
-					minute.
-				</p>
+					<p class="muted">
+						Times are computed for today's date in the target location. Atmospheric refraction and
+						terrain are not considered, and ZIP centroids can introduce a few minutes of error, so expect
+						results to be within a handful of minutes of true solar noon.
+					</p>
 			</section>
 		</main>
 		<Footer />
@@ -168,10 +168,10 @@ import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
 			const runLabel = document.querySelector('[data-run-label]');
 			const driveLabel = document.querySelector('[data-drive-label]');
 
-			form?.addEventListener('submit', async (event) => {
-				event.preventDefault();
-				const data = new FormData(form);
-				const zip = (data.get('zip') ?? '').toString().trim();
+				form?.addEventListener('submit', async (event) => {
+					event.preventDefault();
+					const data = new FormData(form);
+					const zip = (data.get('zip') ?? '').toString().trim();
 
 				if (!/^\d{5}$/.test(zip)) {
 					showStatus('Please enter a valid 5-digit U.S. ZIP code.', 'error');
@@ -182,12 +182,13 @@ import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
 				resultEl?.classList.add('hidden');
 
 				try {
-					const { location, latitude, longitude } = await fetchCoordinates(zip);
-					const { timezone, utcOffsetMinutes } = await fetchTimezone(latitude, longitude);
-					const day = getDayParts(timezone);
-					const eqTime = equationOfTime(day.dayOfYear);
-					const solarNoonMinutes = 720 - 4 * longitude - eqTime + utcOffsetMinutes;
-					const solarNoonDate = buildLocalDate(day, solarNoonMinutes, utcOffsetMinutes);
+						const { location, latitude, longitude } = await fetchCoordinates(zip);
+						const { timezone, utcOffsetMinutes } = await fetchTimezone(latitude, longitude);
+						const day = getDayParts(timezone);
+						const eqTime = equationOfTime(day.dayOfYear);
+						const timezoneMeridian = (utcOffsetMinutes / 60) * 15;
+						const solarNoonMinutes = 720 - 4 * (longitude - timezoneMeridian) - eqTime;
+						const solarNoonDate = buildLocalDate(day, solarNoonMinutes, utcOffsetMinutes);
 
 					displayResult({
 						location,
@@ -266,17 +267,11 @@ import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
 				return { ...parts, dayOfYear };
 			}
 
-			function equationOfTime(dayOfYear) {
-				const B = (2 * Math.PI * (dayOfYear - 81)) / 365;
-				return (
-					229.18 *
-						(0.000075 +
-							0.001868 * Math.cos(B) -
-							0.032077 * Math.sin(B) -
-							0.014615 * Math.cos(2 * B) -
-							0.040849 * Math.sin(2 * B))
-				);
-			}
+				function equationOfTime(dayOfYear) {
+					const B = (2 * Math.PI * (dayOfYear - 81)) / 365;
+					// NOAA approximation in minutes (https://gml.noaa.gov/grad/solcalc/solareqns.PDF)
+					return 9.87 * Math.sin(2 * B) - 7.53 * Math.cos(B) - 1.5 * Math.sin(B);
+				}
 
 			function buildLocalDate(day, minutesFromMidnight, utcOffsetMinutes) {
 				const midnightUtc = Date.UTC(day.year, day.month - 1, day.day, 0, -utcOffsetMinutes);
