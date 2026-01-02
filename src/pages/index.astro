@@ -13,38 +13,392 @@ import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
 	<body>
 		<Header />
 		<main>
-			<h1>🧑‍🚀 Hello, Astronaut!</h1>
-			<p>
-				Welcome to the official <a href="https://astro.build/">Astro</a> blog starter template. This
-				template serves as a lightweight, minimally-styled starting point for anyone looking to build
-				a personal website, blog, or portfolio with Astro.
-			</p>
-			<p>
-				This template comes with a few integrations already configured in your
-				<code>astro.config.mjs</code> file. You can customize your setup with
-				<a href="https://astro.build/integrations">Astro Integrations</a> to add tools like Tailwind,
-				React, or Vue to your project.
-			</p>
-			<p>Here are a few ideas on how to get started with the template:</p>
-			<ul>
-				<li>Edit this page in <code>src/pages/index.astro</code></li>
-				<li>Edit the site header items in <code>src/components/Header.astro</code></li>
-				<li>Add your name to the footer in <code>src/components/Footer.astro</code></li>
-				<li>Check out the included blog posts in <code>src/content/blog/</code></li>
-				<li>Customize the blog post page layout in <code>src/layouts/BlogPost.astro</code></li>
-			</ul>
-			<p>
-				Have fun! If you get stuck, remember to <a href="https://docs.astro.build/"
-					>read the docs
-				</a> or <a href="https://astro.build/chat">join us on Discord</a> to ask questions.
-			</p>
-			<p>
-				Looking for a blog template with a bit more personality? Check out <a
-					href="https://github.com/Charca/astro-blog-template"
-					>astro-blog-template
-				</a> by <a href="https://twitter.com/Charca">Maxi Ferreira</a>.
-			</p>
+			<section class="hero">
+				<p class="eyebrow">Live idea sketchpad</p>
+				<h1>Demographic startup idea generator</h1>
+				<p class="lede">
+					Pick a demographic in seconds—or let the app choose one for you—and instantly generate
+					tailored startup concepts with positioning, delivery, and revenue angles.
+				</p>
+				<div class="hero-grid">
+					<div class="stat">
+						<span class="label">Ideas per click</span>
+						<strong>3 curated</strong>
+					</div>
+					<div class="stat">
+						<span class="label">Demo inputs</span>
+						<strong>Gender, age, region</strong>
+					</div>
+					<div class="stat">
+						<span class="label">Randomizer</span>
+						<strong>One-tap surprise</strong>
+					</div>
+				</div>
+			</section>
+
+			<section class="panel">
+				<div class="panel-header">
+					<div>
+						<p class="eyebrow">Step 1</p>
+						<h2>Choose or randomize a demographic</h2>
+						<p class="lede">
+							Lock in a specific audience, or let the randomizer surface a fresh cohort to ideate
+							around.
+						</p>
+					</div>
+					<button type="button" class="ghost" id="randomize">🎲 Randomize demographic</button>
+				</div>
+				<form id="demographic-form" class="form-grid">
+					<label>
+						<span>Gender identity</span>
+						<select name="gender" required>
+							<option value="Women">Women</option>
+							<option value="Men">Men</option>
+							<option value="Nonbinary">Nonbinary</option>
+							<option value="All genders">All genders</option>
+						</select>
+					</label>
+					<label>
+						<span>Age range</span>
+						<select name="ageRange" required>
+							<option value="18–24">18–24</option>
+							<option value="25–30">25–30</option>
+							<option value="31–40">31–40</option>
+							<option value="41–50">41–50</option>
+							<option value="51–60">51–60</option>
+							<option value="61–70">61–70</option>
+						</select>
+					</label>
+					<label>
+						<span>Region</span>
+						<select name="region" required>
+							<option value="United States">United States</option>
+							<option value="Canada">Canada</option>
+							<option value="Brazil">Brazil</option>
+							<option value="United Kingdom">United Kingdom</option>
+							<option value="Germany">Germany</option>
+							<option value="India">India</option>
+							<option value="Singapore">Singapore</option>
+							<option value="Australia">Australia</option>
+						</select>
+					</label>
+					<label class="full">
+						<span>Personal angle (optional)</span>
+						<textarea
+							name="personalAngle"
+							rows="2"
+							placeholder="e.g., remote workers who prioritize wellness and flexible income"
+						></textarea>
+					</label>
+					<div class="actions">
+						<button class="primary" type="submit">Generate startup ideas</button>
+						<p class="hint">You’ll get three differentiated concepts every time.</p>
+					</div>
+				</form>
+			</section>
+
+			<section class="panel ideas">
+				<div class="panel-header">
+					<div>
+						<p class="eyebrow">Step 2</p>
+						<h2>Idea set for your selected demographic</h2>
+						<p class="lede">
+							Each card blends a clear value prop, a delivery format, and a monetization path so you
+							can pressure-test the concept quickly.
+						</p>
+					</div>
+					<div class="chip" id="demo-chip">Loading demographic...</div>
+				</div>
+				<ol id="idea-list" class="idea-list" aria-live="polite">
+					<li class="idea-card">Waiting for your first idea...</li>
+				</ol>
+			</section>
 		</main>
 		<Footer />
+
+		<style>
+			.hero {
+				display: grid;
+				gap: 1rem;
+				padding: 1rem 0 2rem;
+			}
+			.eyebrow {
+				text-transform: uppercase;
+				letter-spacing: 0.08em;
+				font-weight: 700;
+				font-size: 0.75rem;
+				color: rgb(var(--gray));
+				margin: 0 0 0.25rem;
+			}
+			.lede {
+				margin: 0.25rem 0 0;
+				color: rgb(var(--gray));
+			}
+			.hero-grid {
+				display: grid;
+				gap: 1rem;
+				grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+			}
+			.stat {
+				border: 1px solid rgb(var(--gray-light));
+				border-radius: 12px;
+				padding: 0.75rem 1rem;
+				background: white;
+				box-shadow: 0 6px 20px rgba(var(--gray), 0.08);
+			}
+			.stat .label {
+				display: block;
+				color: rgb(var(--gray));
+				font-size: 0.9rem;
+				margin-bottom: 0.1rem;
+			}
+			.panel {
+				background: white;
+				padding: 1.5rem;
+				border-radius: 16px;
+				box-shadow: 0 12px 30px rgba(var(--gray), 0.12);
+				margin: 1.5rem 0;
+				border: 1px solid rgb(var(--gray-light));
+			}
+			.panel-header {
+				display: flex;
+				justify-content: space-between;
+				align-items: flex-start;
+				gap: 1rem;
+				flex-wrap: wrap;
+			}
+			.form-grid {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+				gap: 1rem 1.25rem;
+				margin-top: 1rem;
+			}
+			label {
+				display: grid;
+				gap: 0.35rem;
+				font-weight: 600;
+				color: rgb(var(--gray-dark));
+			}
+			select,
+			textarea {
+				padding: 0.75rem;
+				border-radius: 10px;
+				border: 1px solid rgb(var(--gray-light));
+				font-size: 1rem;
+				font-family: "Atkinson", sans-serif;
+				background: rgb(255, 255, 255);
+				box-shadow: 0 4px 10px rgba(var(--gray), 0.06);
+			}
+			select:focus,
+			textarea:focus,
+			button:focus-visible {
+				outline: 2px solid var(--accent);
+				outline-offset: 2px;
+			}
+			.full {
+				grid-column: 1 / -1;
+			}
+			.actions {
+				display: flex;
+				align-items: center;
+				gap: 1rem;
+				grid-column: 1 / -1;
+				flex-wrap: wrap;
+			}
+			.primary,
+			.ghost {
+				border: none;
+				cursor: pointer;
+				border-radius: 12px;
+				padding: 0.85rem 1.1rem;
+				font-weight: 700;
+				font-size: 1rem;
+				transition: transform 120ms ease, box-shadow 160ms ease, background 120ms ease;
+				font-family: "Atkinson", sans-serif;
+			}
+			.primary {
+				color: white;
+				background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+				box-shadow: 0 10px 24px rgba(35, 55, 255, 0.35);
+			}
+			.primary:hover,
+			.ghost:hover {
+				transform: translateY(-1px);
+			}
+			.ghost {
+				color: rgb(var(--gray-dark));
+				background: rgb(245, 247, 255);
+				border: 1px solid rgba(var(--accent), 0.3);
+			}
+			.hint {
+				margin: 0;
+				color: rgb(var(--gray));
+				font-size: 0.95rem;
+			}
+			.ideas .panel-header {
+				align-items: center;
+			}
+			.chip {
+				border-radius: 999px;
+				padding: 0.6rem 1rem;
+				background: rgb(245, 247, 255);
+				color: rgb(var(--accent));
+				border: 1px solid rgba(var(--accent), 0.4);
+				font-weight: 700;
+				white-space: nowrap;
+			}
+			.idea-list {
+				list-style: decimal-leading-zero;
+				padding-left: 1.5rem;
+				margin: 1.25rem 0 0;
+				display: grid;
+				gap: 0.75rem;
+			}
+			.idea-card {
+				background: rgb(248, 250, 255);
+				border: 1px solid rgb(var(--gray-light));
+				border-radius: 14px;
+				padding: 1rem 1.25rem;
+				box-shadow: 0 6px 18px rgba(var(--gray), 0.08);
+				color: rgb(var(--gray-dark));
+				line-height: 1.6;
+			}
+			.idea-card strong {
+				color: rgb(var(--black));
+			}
+			@media (max-width: 640px) {
+				.panel-header {
+					flex-direction: column;
+				}
+				.actions {
+					align-items: flex-start;
+				}
+				.idea-list {
+					list-style: none;
+					padding-left: 0;
+				}
+				.idea-card {
+					padding: 1rem;
+				}
+			}
+		</style>
+
+		<script>
+			const genderOptions = ["Women", "Men", "Nonbinary", "All genders"];
+			const ageRanges = ["18–24", "25–30", "31–40", "41–50", "51–60", "61–70"];
+			const regions = [
+				"United States",
+				"Canada",
+				"Brazil",
+				"United Kingdom",
+				"Germany",
+				"India",
+				"Singapore",
+				"Australia"
+			];
+			const focusByAge = {
+				"18–24": ["career discovery", "community-first learning", "affordable experiences"],
+				"25–30": ["side-hustle stacking", "relationship building", "mobility and travel"],
+				"31–40": ["upskilling for promotions", "family logistics", "financial resilience"],
+				"41–50": ["health optimization", "mid-career pivots", "time-saving services"],
+				"51–60": ["wealth protection", "active lifestyle", "lightweight consulting"],
+				"61–70": ["healthy aging", "intergenerational connections", "leisure with purpose"]
+			};
+			const deliveryFormats = [
+				"mobile app + concierge layer",
+				"micro-community platform",
+				"subscription marketplace",
+				"text-first coaching service",
+				"async cohort program",
+				"AI-powered planning tool"
+			];
+			const monetization = [
+				"tiered subscription",
+				"usage-based pricing",
+				"performance-based take rate",
+				"membership + perks",
+				"freemium with paid accelerators"
+			];
+			const proofPoints = [
+				"earns trust through local experts",
+				"bundles templates and live sessions",
+				"keeps users accountable with streaks",
+				"pairs people with micro-cohorts",
+				"personalizes flows with AI copilots",
+				"integrates with the tools they already use"
+			];
+
+			const form = document.querySelector("#demographic-form");
+			const ideaList = document.querySelector("#idea-list");
+			const randomizeButton = document.querySelector("#randomize");
+			const demoChip = document.querySelector("#demo-chip");
+
+			const randomFrom = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+			const buildDemographic = () => {
+				const data = new FormData(form);
+				return {
+					gender: data.get("gender"),
+					ageRange: data.get("ageRange"),
+					region: data.get("region"),
+					personalAngle: (data.get("personalAngle") || "").toString().trim()
+				};
+			};
+
+			const randomizeForm = () => {
+				form.gender.value = randomFrom(genderOptions);
+				form.ageRange.value = randomFrom(ageRanges);
+				form.region.value = randomFrom(regions);
+			};
+
+			const describeDemographic = (demo) => {
+				const base = `${demo.gender} aged ${demo.ageRange} in ${demo.region}`;
+				return demo.personalAngle ? `${base}, ${demo.personalAngle}` : base;
+			};
+
+			const buildIdea = (demo) => {
+				const focus = randomFrom(focusByAge[demo.ageRange] || ["practical daily wins"]);
+				const delivery = randomFrom(deliveryFormats);
+				const monetizationPath = randomFrom(monetization);
+				const proof = randomFrom(proofPoints);
+
+				return `<strong>${focus}</strong> for ${demo.gender.toLowerCase()} aged ${demo.ageRange} in ${
+					demo.region
+				}${
+					demo.personalAngle ? ` (${demo.personalAngle})` : ""
+				}, delivered as a ${delivery}. Monetize via ${monetizationPath} and ${proof}.`;
+			};
+
+			const renderIdeas = () => {
+				const demographic = buildDemographic();
+				demoChip.textContent = describeDemographic(demographic);
+
+				const uniqueIdeas = new Set();
+				while (uniqueIdeas.size < 3) {
+					uniqueIdeas.add(buildIdea(demographic));
+				}
+
+				ideaList.innerHTML = "";
+				[...uniqueIdeas].forEach((idea) => {
+					const li = document.createElement("li");
+					li.className = "idea-card";
+					li.innerHTML = idea;
+					ideaList.appendChild(li);
+				});
+			};
+
+			form.addEventListener("submit", (event) => {
+				event.preventDefault();
+				renderIdeas();
+			});
+
+			randomizeButton.addEventListener("click", () => {
+				randomizeForm();
+				renderIdeas();
+			});
+
+			randomizeForm();
+			renderIdeas();
+		</script>
 	</body>
 </html>
