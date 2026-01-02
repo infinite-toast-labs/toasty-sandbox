@@ -417,10 +417,12 @@ import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
 			function syncQueryParams({ zip, runDuration, driveDuration } = {}) {
 				const nextParams = new URLSearchParams(window.location.search);
 
-				if (zip) {
-					nextParams.set('zip', zip);
-				} else {
-					nextParams.delete('zip');
+				if (zip !== undefined) {
+					if (zip) {
+						nextParams.set('zip', zip);
+					} else {
+						nextParams.delete('zip');
+					}
 				}
 
 				if (Number.isFinite(runDuration) && runDuration !== defaultRunMinutes) {
