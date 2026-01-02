@@ -72,6 +72,60 @@ import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
 							<dd data-eqtime>—</dd>
 						</div>
 					</dl>
+					<section class="planner">
+						<div class="planner__noon">
+							<p class="muted">Today's solar noon</p>
+							<p class="noon-time" data-noon-time>—</p>
+						</div>
+						<div class="controls">
+							<label for="run-duration">Trail run duration (min)</label>
+							<div class="control-row">
+								<input
+									type="range"
+									min="30"
+									max="120"
+									step="5"
+									value="60"
+									id="run-duration"
+									data-run-slider
+									disabled
+								/>
+								<span class="control-value" data-run-label>60 min</span>
+							</div>
+							<label for="drive-duration">Drive time each way (min)</label>
+							<div class="control-row">
+								<input
+									type="range"
+									min="0"
+									max="90"
+									step="5"
+									value="0"
+									id="drive-duration"
+									data-drive-slider
+									disabled
+								/>
+								<span class="control-value" data-drive-label>0 min</span>
+							</div>
+						</div>
+						<div class="planner__times">
+							<div class="time-block">
+								<p class="muted">Start running</p>
+								<p class="time-value" data-run-start>—</p>
+							</div>
+							<div class="time-block">
+								<p class="muted">Finish running</p>
+								<p class="time-value" data-run-end>—</p>
+							</div>
+							<div class="time-block" data-drive-start-block>
+								<p class="muted">Start driving</p>
+								<p class="time-value" data-drive-start>—</p>
+							</div>
+							<div class="time-block" data-drive-end-block>
+								<p class="muted">Drive back by</p>
+								<p class="time-value" data-drive-end>—</p>
+							</div>
+						</div>
+					</section>
 				</div>
 			</section>
 
@@ -91,6 +145,7 @@ import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
 					minute.
 				</p>
 			</section>
+		</main>
 		<Footer />
 		<script type="module">
 			const form = document.getElementById('solar-form');
@@ -101,6 +156,17 @@ import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
 			const timezoneEl = document.querySelector('[data-timezone]');
 			const offsetEl = document.querySelector('[data-offset]');
 			const eqTimeEl = document.querySelector('[data-eqtime]');
+			const noonTimeEl = document.querySelector('[data-noon-time]');
+			const runStartEl = document.querySelector('[data-run-start]');
+			const runEndEl = document.querySelector('[data-run-end]');
+			const driveStartEl = document.querySelector('[data-drive-start]');
+			const driveEndEl = document.querySelector('[data-drive-end]');
+			const driveStartBlock = document.querySelector('[data-drive-start-block]');
+			const driveEndBlock = document.querySelector('[data-drive-end-block]');
+			const runSlider = document.querySelector('[data-run-slider]');
+			const driveSlider = document.querySelector('[data-drive-slider]');
+			const runLabel = document.querySelector('[data-run-label]');
+			const driveLabel = document.querySelector('[data-drive-label]');
 
 			form?.addEventListener('submit', async (event) => {
 				event.preventDefault();
@@ -184,12 +250,15 @@ import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
 					month: 'numeric',
 					day: 'numeric',
 				});
-				const parts = formatter.formatToParts(now).reduce((acc, part) => {
-					if (part.type === 'year') acc.year = Number(part.value);
-					if (part.type === 'month') acc.month = Number(part.value);
-					if (part.type === 'day') acc.day = Number(part.value);
-					return acc;
-				}, { year: 0, month: 0, day: 0 });
+				const parts = formatter.formatToParts(now).reduce(
+					(acc, part) => {
+						if (part.type === 'year') acc.year = Number(part.value);
+						if (part.type === 'month') acc.month = Number(part.value);
+						if (part.type === 'day') acc.day = Number(part.value);
+						return acc;
+					},
+					{ year: 0, month: 0, day: 0 },
+				);
 
 				const start = Date.UTC(parts.year, 0, 0);
 				const current = Date.UTC(parts.year, parts.month - 1, parts.day);
@@ -246,13 +315,67 @@ import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
 				timezoneEl.textContent = timezone;
 				offsetEl.textContent = `${formatOffset(utcOffsetMinutes)} from UTC`;
 				eqTimeEl.textContent = `${eqTime.toFixed(1)} minutes`;
+				noonTimeEl.textContent = noonString;
 
 				resultEl?.classList.remove('hidden');
+				enablePlanner({ solarNoonDate, timezone });
+			}
+
+			function enablePlanner({ solarNoonDate, timezone }) {
+				[runSlider, driveSlider].forEach((control) => {
+					if (control) control.disabled = false;
+				});
+
+				const updatePlanner = () => {
+					const runMinutes = Number(runSlider?.value ?? 60);
+					const driveMinutes = Number(driveSlider?.value ?? 0);
+
+					if (runLabel) runLabel.textContent = `${runMinutes} min`;
+					if (driveLabel) driveLabel.textContent = `${driveMinutes} min`;
+
+					const halfRun = runMinutes / 2;
+					const runStart = addMinutes(solarNoonDate, -halfRun);
+					const runEnd = addMinutes(solarNoonDate, halfRun);
+
+					runStartEl.textContent = formatTime(runStart, timezone);
+					runEndEl.textContent = formatTime(runEnd, timezone);
+
+					const hasDrive = driveMinutes > 0;
+					if (driveStartBlock && driveEndBlock) {
+						driveStartBlock.style.display = hasDrive ? 'block' : 'none';
+						driveEndBlock.style.display = hasDrive ? 'block' : 'none';
+					}
+
+					if (hasDrive) {
+						const depart = addMinutes(runStart, -driveMinutes);
+						const returnDepart = addMinutes(runEnd, driveMinutes);
+						driveStartEl.textContent = formatTime(depart, timezone);
+						driveEndEl.textContent = formatTime(returnDepart, timezone);
+					}
+				};
+
+				runSlider?.addEventListener('input', updatePlanner);
+				driveSlider?.addEventListener('input', updatePlanner);
+				updatePlanner();
 			}
 
 			function showStatus(message, intent = 'neutral') {
 				statusEl.textContent = message;
 				statusEl.dataset.intent = intent;
+			}
+
+			function addMinutes(date, minutes) {
+				return new Date(date.getTime() + minutes * 60 * 1000);
+			}
+
+			function formatTime(date, timeZone) {
+				return new Intl.DateTimeFormat('en-US', {
+					hour: 'numeric',
+					minute: '2-digit',
+					second: '2-digit',
+					timeZone,
+					hour12: true,
+				}).format(date);
 			}
 		</script>
 		<style>
@@ -434,8 +557,72 @@ import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
 				gap: 0.5rem;
 			}
 
+			.planner {
+				margin-top: 1.25rem;
+				padding: 1rem 1.25rem;
+				border-radius: 12px;
+				border: 1px solid rgba(var(--gray), 0.15);
+				background: white;
+				display: grid;
+				gap: 1rem;
+			}
+
+			.planner__noon {
+				text-align: center;
+			}
+
+			.noon-time {
+				margin: 0.2rem 0 0;
+				font-size: 2.4rem;
+				font-weight: 800;
+			}
+
+			.controls {
+				display: grid;
+				gap: 0.35rem;
+			}
+
+			.control-row {
+				display: flex;
+				align-items: center;
+				gap: 0.75rem;
+				flex-wrap: wrap;
+			}
+
+			input[type='range'] {
+				flex: 1 1 240px;
+				accent-color: var(--accent);
+			}
+
+			.control-value {
+				min-width: 64px;
+				text-align: right;
+				font-weight: 700;
+				color: rgb(var(--gray-dark));
+			}
+
+			.planner__times {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+				gap: 0.75rem;
+			}
+
+			.time-block {
+				padding: 0.75rem;
+				border-radius: 10px;
+				border: 1px solid rgba(var(--gray), 0.12);
+				background: linear-gradient(180deg, rgba(var(--gray-light), 0.4), white);
+			}
+
+			.time-value {
+				margin: 0.2rem 0 0;
+				font-size: 1.15rem;
+				font-weight: 700;
+			}
+
 			@media (max-width: 720px) {
-				.card, .hero {
+				.card,
+				.hero {
 					padding: 1.25rem;
 				}
 			}
