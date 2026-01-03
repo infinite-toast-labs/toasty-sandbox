@@ -108,20 +108,20 @@ import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
 							</div>
 						</div>
 						<div class="planner__times">
-							<div class="time-block">
-								<p class="muted">Start running</p>
+							<div class="time-block" data-run-start-block>
+								<p class="muted">Start running 🏃</p>
 								<p class="time-value" data-run-start>—</p>
 							</div>
-							<div class="time-block">
-								<p class="muted">Finish running</p>
+							<div class="time-block" data-run-end-block>
+								<p class="muted">Finish running 🏁</p>
 								<p class="time-value" data-run-end>—</p>
 							</div>
 							<div class="time-block" data-drive-start-block>
-								<p class="muted">Start driving</p>
+								<p class="muted">Start driving 🚗</p>
 								<p class="time-value" data-drive-start>—</p>
 							</div>
 							<div class="time-block" data-drive-end-block>
-								<p class="muted">Drive back by</p>
+								<p class="muted">Drive back by 🏡</p>
 								<p class="time-value" data-drive-end>—</p>
 							</div>
 						</div>
@@ -161,6 +161,8 @@ import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
 			const runEndEl = document.querySelector('[data-run-end]');
 			const driveStartEl = document.querySelector('[data-drive-start]');
 			const driveEndEl = document.querySelector('[data-drive-end]');
+			const runStartBlock = document.querySelector('[data-run-start-block]');
+			const runEndBlock = document.querySelector('[data-run-end-block]');
 			const driveStartBlock = document.querySelector('[data-drive-start-block]');
 			const driveEndBlock = document.querySelector('[data-drive-end-block]');
 			const runSlider = document.querySelector('[data-run-slider]');
@@ -342,6 +344,7 @@ import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
 				const updatePlanner = () => {
 					const runMinutes = Number(runSlider?.value ?? 60);
 					const driveMinutes = Number(driveSlider?.value ?? 0);
+					const hasDrive = driveMinutes > 0;
 
 					syncQueryParams({
 						runDuration: runMinutes,
@@ -358,11 +361,12 @@ import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
 					runStartEl.textContent = formatTime(runStart, timezone);
 					runEndEl.textContent = formatTime(runEnd, timezone);
 
-					const hasDrive = driveMinutes > 0;
 					if (driveStartBlock && driveEndBlock) {
 						driveStartBlock.style.display = hasDrive ? 'block' : 'none';
 						driveEndBlock.style.display = hasDrive ? 'block' : 'none';
 					}
+
+					updateTimeBlockOrder(hasDrive);
 
 					if (hasDrive) {
 						const depart = addMinutes(runStart, -driveMinutes);
@@ -375,6 +379,24 @@ import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
 				runSlider?.addEventListener('input', updatePlanner);
 				driveSlider?.addEventListener('input', updatePlanner);
 				updatePlanner();
+
+				function updateTimeBlockOrder(hasDrive) {
+					const setOrder = (block, order) => {
+						if (block) block.style.order = order.toString();
+					};
+
+					if (hasDrive) {
+						setOrder(driveStartBlock, 0);
+						setOrder(runStartBlock, 1);
+						setOrder(runEndBlock, 2);
+						setOrder(driveEndBlock, 3);
+					} else {
+						setOrder(runStartBlock, 0);
+						setOrder(runEndBlock, 1);
+						setOrder(driveStartBlock, 2);
+						setOrder(driveEndBlock, 3);
+					}
+				}
 			}
 
 			function showStatus(message, intent = 'neutral') {
