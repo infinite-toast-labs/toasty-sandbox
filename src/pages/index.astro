@@ -172,9 +172,11 @@ import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
 			const defaultRunMinutes = Number(runSlider?.value ?? 60);
 			const defaultDriveMinutes = Number(driveSlider?.value ?? 0);
 			const params = new URLSearchParams(window.location.search);
+			const manifestUpdater = createManifestUpdater();
 
 			initializeFromQuery(params);
 			updateShareMeta(window.location.href);
+			manifestUpdater.updateManifestStartUrl();
 			form?.addEventListener('submit', async (event) => {
 				event.preventDefault();
 				const data = new FormData(form);
@@ -443,6 +445,50 @@ import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
 
 				window.history.replaceState({}, '', url);
 				updateShareMeta(absoluteUrl);
+				manifestUpdater.updateManifestStartUrl();
+			}
+
+			function createManifestUpdater() {
+				const manifestLink = document.querySelector('link[rel="manifest"]');
+				let cachedManifest;
+				let objectUrl;
+
+				const cloneManifest = (manifest) => JSON.parse(JSON.stringify(manifest));
+
+				const getManifest = async () => {
+					if (!manifestLink) return null;
+					if (!cachedManifest) {
+						const response = await fetch(manifestLink.href);
+						cachedManifest = await response.json();
+					}
+					return cloneManifest(cachedManifest);
+				};
+
+				const updateManifestStartUrl = async () => {
+					if (!manifestLink) return;
+					try {
+						const manifest = await getManifest();
+						if (!manifest) return;
+
+						const current = new URL(window.location.href);
+						manifest.start_url = `${current.pathname}${current.search}${current.hash}`;
+
+						const blob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
+						const url = URL.createObjectURL(blob);
+						manifestLink.setAttribute('href', url);
+
+						if (objectUrl) URL.revokeObjectURL(objectUrl);
+						objectUrl = url;
+					} catch (error) {
+						console.error('Could not update manifest start_url', error);
+					}
+				};
+
+				window.addEventListener('beforeunload', () => {
+					if (objectUrl) URL.revokeObjectURL(objectUrl);
+				});
+
+				return { updateManifestStartUrl };
 			}
 
 			function addMinutes(date, minutes) {
