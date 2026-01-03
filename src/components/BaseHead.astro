@@ -13,12 +13,15 @@ const canonicalURL = Astro.url;
 const canonicalHref = canonicalURL.toString();
 
 const { title, description, image = '/blog-placeholder-1.jpg' } = Astro.props;
+const themeColor = '#f6c344';
 ---
 
 <!-- Global Metadata -->
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="manifest" href="/manifest.webmanifest" />
+<meta name="theme-color" content={themeColor} />
 <meta name="generator" content={Astro.generator} />
 
 <!-- Font preloads -->
