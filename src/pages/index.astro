@@ -12,39 +12,773 @@ import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
 	</head>
 	<body>
 		<Header />
-		<main>
-			<h1>🧑‍🚀 Hello, Astronaut!</h1>
-			<p>
-				Welcome to the official <a href="https://astro.build/">Astro</a> blog starter template. This
-				template serves as a lightweight, minimally-styled starting point for anyone looking to build
-				a personal website, blog, or portfolio with Astro.
-			</p>
-			<p>
-				This template comes with a few integrations already configured in your
-				<code>astro.config.mjs</code> file. You can customize your setup with
-				<a href="https://astro.build/integrations">Astro Integrations</a> to add tools like Tailwind,
-				React, or Vue to your project.
-			</p>
-			<p>Here are a few ideas on how to get started with the template:</p>
-			<ul>
-				<li>Edit this page in <code>src/pages/index.astro</code></li>
-				<li>Edit the site header items in <code>src/components/Header.astro</code></li>
-				<li>Add your name to the footer in <code>src/components/Footer.astro</code></li>
-				<li>Check out the included blog posts in <code>src/content/blog/</code></li>
-				<li>Customize the blog post page layout in <code>src/layouts/BlogPost.astro</code></li>
-			</ul>
-			<p>
-				Have fun! If you get stuck, remember to <a href="https://docs.astro.build/"
-					>read the docs
-				</a> or <a href="https://astro.build/chat">join us on Discord</a> to ask questions.
-			</p>
-			<p>
-				Looking for a blog template with a bit more personality? Check out <a
-					href="https://github.com/Charca/astro-blog-template"
-					>astro-blog-template
-				</a> by <a href="https://twitter.com/Charca">Maxi Ferreira</a>.
-			</p>
+		<main class="page">
+			<section class="hero">
+				<p class="eyebrow">Solar timing lab</p>
+				<h1>Find empirical noon by ZIP code</h1>
+				<p class="lede">
+					Discover the exact moment the sun is perfectly orthogonal to the Earth for any U.S. ZIP
+					code. We combine latitude/longitude data with NOAA's equation of time to calculate true
+					solar noon.
+				</p>
+				<ul class="hero-list">
+					<li>ZIP ➜ coordinates via <a href="https://api.zippopotam.us" target="_blank">Zippopotam</a></li>
+					<li>Coordinates ➜ timezone via <a href="https://open-meteo.com" target="_blank">Open-Meteo</a></li>
+					<li>Sun angle ➜ local solar noon using the equation of time</li>
+				</ul>
+			</section>
+
+			<section class="card">
+				<div class="card__header">
+					<div>
+						<h2>Get today's solar noon</h2>
+						<p class="muted">Valid for the current calendar day in the selected location.</p>
+					</div>
+				</div>
+				<form id="solar-form" class="form">
+					<label for="zip">ZIP code</label>
+					<div class="input-row">
+						<input
+							required
+							inputmode="numeric"
+							pattern="[0-9]{5}"
+							name="zip"
+							id="zip"
+							placeholder="e.g. 80302"
+							maxlength="5"
+						/>
+						<button type="submit">Find solar noon</button>
+					</div>
+					<p class="helper">Currently supports U.S. ZIP codes.</p>
+				</form>
+				<div class="status" data-status>Enter a ZIP code to get started.</div>
+				<div class="result hidden" data-result>
+					<p class="result__title" data-summary>—</p>
+					<dl class="meta">
+						<div>
+							<dt>Location</dt>
+							<dd data-location>—</dd>
+						</div>
+						<div>
+							<dt>Time zone</dt>
+							<dd data-timezone>—</dd>
+						</div>
+						<div>
+							<dt>Offset</dt>
+							<dd data-offset>—</dd>
+						</div>
+						<div>
+							<dt>Equation of time</dt>
+							<dd data-eqtime>—</dd>
+						</div>
+					</dl>
+					<section class="planner">
+						<div class="planner__noon">
+							<p class="muted">Today's solar noon</p>
+							<p class="noon-time" data-noon-time>—</p>
+						</div>
+						<div class="controls">
+							<label for="run-duration">Trail run duration (min)</label>
+							<div class="control-row">
+								<input
+									type="range"
+									min="30"
+									max="120"
+									step="5"
+									value="60"
+									id="run-duration"
+									data-run-slider
+									disabled
+								/>
+								<span class="control-value" data-run-label>60 min</span>
+							</div>
+							<label for="drive-duration">Drive time each way (min)</label>
+							<div class="control-row">
+								<input
+									type="range"
+									min="0"
+									max="90"
+									step="5"
+									value="0"
+									id="drive-duration"
+									data-drive-slider
+									disabled
+								/>
+								<span class="control-value" data-drive-label>0 min</span>
+							</div>
+						</div>
+						<div class="planner__times">
+							<div class="time-block" data-run-start-block>
+								<p class="muted">Start running 🏃</p>
+								<p class="time-value" data-run-start>—</p>
+							</div>
+							<div class="time-block" data-run-end-block>
+								<p class="muted">Finish running 🏁</p>
+								<p class="time-value" data-run-end>—</p>
+							</div>
+							<div class="time-block" data-drive-start-block>
+								<p class="muted">Start driving 🚗</p>
+								<p class="time-value" data-drive-start>—</p>
+							</div>
+							<div class="time-block" data-drive-end-block>
+								<p class="muted">Drive back by 🏡</p>
+								<p class="time-value" data-drive-end>—</p>
+							</div>
+						</div>
+					</section>
+				</div>
+			</section>
+
+			<section class="card card--muted">
+				<h2>How we calculate true noon</h2>
+				<ol>
+					<li>Translate your ZIP code into latitude/longitude using Zippopotam.</li>
+					<li>Detect the local time zone and UTC offset from Open-Meteo's forecast metadata.</li>
+					<li>
+						Use NOAA's equation of time (which accounts for Earth's tilt and orbital eccentricity)
+						to find the moment the sun crosses your meridian.
+					</li>
+				</ol>
+					<p class="muted">
+						Times are computed for today's date in the target location. Atmospheric refraction and
+						terrain are not considered, and ZIP centroids can introduce a few minutes of error, so expect
+						results to be within a handful of minutes of true solar noon.
+					</p>
+			</section>
 		</main>
 		<Footer />
+		<script type="module">
+			const form = document.getElementById('solar-form');
+			const statusEl = document.querySelector('[data-status]');
+			const resultEl = document.querySelector('[data-result]');
+			const summaryEl = document.querySelector('[data-summary]');
+			const locationEl = document.querySelector('[data-location]');
+			const timezoneEl = document.querySelector('[data-timezone]');
+			const offsetEl = document.querySelector('[data-offset]');
+			const eqTimeEl = document.querySelector('[data-eqtime]');
+			const noonTimeEl = document.querySelector('[data-noon-time]');
+			const runStartEl = document.querySelector('[data-run-start]');
+			const runEndEl = document.querySelector('[data-run-end]');
+			const driveStartEl = document.querySelector('[data-drive-start]');
+			const driveEndEl = document.querySelector('[data-drive-end]');
+			const runStartBlock = document.querySelector('[data-run-start-block]');
+			const runEndBlock = document.querySelector('[data-run-end-block]');
+			const driveStartBlock = document.querySelector('[data-drive-start-block]');
+			const driveEndBlock = document.querySelector('[data-drive-end-block]');
+			const runSlider = document.querySelector('[data-run-slider]');
+			const driveSlider = document.querySelector('[data-drive-slider]');
+			const runLabel = document.querySelector('[data-run-label]');
+			const driveLabel = document.querySelector('[data-drive-label]');
+			const zipInput = document.getElementById('zip');
+
+			const defaultRunMinutes = Number(runSlider?.value ?? 60);
+			const defaultDriveMinutes = Number(driveSlider?.value ?? 0);
+			const params = new URLSearchParams(window.location.search);
+			const manifestUpdater = createManifestUpdater();
+
+			initializeFromQuery(params);
+			updateShareMeta(window.location.href);
+			manifestUpdater.updateManifestStartUrl();
+			form?.addEventListener('submit', async (event) => {
+				event.preventDefault();
+				const data = new FormData(form);
+				const zip = (data.get('zip') ?? '').toString().trim();
+
+				if (!/^\d{5}$/.test(zip)) {
+					showStatus('Please enter a valid 5-digit U.S. ZIP code.', 'error');
+					return;
+				}
+
+				syncQueryParams({
+					zip,
+					runDuration: Number(runSlider?.value ?? defaultRunMinutes),
+					driveDuration: Number(driveSlider?.value ?? defaultDriveMinutes),
+				});
+
+				showStatus('Looking up coordinates and time zone…', 'loading');
+				resultEl?.classList.add('hidden');
+
+				try {
+					const { location, latitude, longitude } = await fetchCoordinates(zip);
+					const { timezone, utcOffsetMinutes } = await fetchTimezone(latitude, longitude);
+					const day = getDayParts(timezone);
+					const eqTime = equationOfTime(day.dayOfYear);
+					const timezoneMeridian = (utcOffsetMinutes / 60) * 15;
+					const solarNoonMinutes = 720 - 4 * (longitude - timezoneMeridian) - eqTime;
+					const solarNoonDate = buildLocalDate(day, solarNoonMinutes, utcOffsetMinutes);
+
+					displayResult({
+						location,
+						timezone,
+						utcOffsetMinutes,
+						eqTime,
+						solarNoonDate,
+						solarNoonMinutes,
+					});
+					showStatus("Calculated using today's date for that location.", 'success');
+				} catch (error) {
+					const message = error instanceof Error ? error.message : 'Something went wrong.';
+					showStatus(message, 'error');
+				}
+			});
+
+			if (zipInput?.value) {
+				form?.requestSubmit();
+			}
+			async function fetchCoordinates(zip) {
+				const response = await fetch(`https://api.zippopotam.us/us/${zip}`);
+				if (!response.ok) {
+					throw new Error('ZIP code not found. Try another U.S. ZIP code.');
+				}
+				const payload = await response.json();
+				const place = payload.places?.[0];
+				if (!place) {
+					throw new Error('Could not read location data for that ZIP code.');
+				}
+				return {
+					location: `${place["place name"]}, ${place.state}`,
+					latitude: Number(place.latitude),
+					longitude: Number(place.longitude),
+				};
+			}
+
+			async function fetchTimezone(latitude, longitude) {
+				const params = new URLSearchParams({
+					latitude: latitude.toString(),
+					longitude: longitude.toString(),
+					current: 'temperature_2m',
+					timezone: 'auto',
+				});
+				const response = await fetch(`https://api.open-meteo.com/v1/forecast?${params.toString()}`);
+				if (!response.ok) {
+					throw new Error('Could not fetch timezone data.');
+				}
+				const payload = await response.json();
+				if (!payload.timezone || typeof payload.utc_offset_seconds !== 'number') {
+					throw new Error('Time zone details were missing from the response.');
+				}
+				return {
+					timezone: payload.timezone,
+					utcOffsetMinutes: payload.utc_offset_seconds / 60,
+				};
+			}
+
+			function getDayParts(timeZone) {
+				const now = new Date();
+				const formatter = new Intl.DateTimeFormat('en-US', {
+					timeZone,
+					year: 'numeric',
+					month: 'numeric',
+					day: 'numeric',
+				});
+				const parts = formatter.formatToParts(now).reduce(
+					(acc, part) => {
+						if (part.type === 'year') acc.year = Number(part.value);
+						if (part.type === 'month') acc.month = Number(part.value);
+						if (part.type === 'day') acc.day = Number(part.value);
+						return acc;
+					},
+					{ year: 0, month: 0, day: 0 },
+				);
+
+				const start = Date.UTC(parts.year, 0, 0);
+				const current = Date.UTC(parts.year, parts.month - 1, parts.day);
+				const dayOfYear = Math.floor((current - start) / (1000 * 60 * 60 * 24));
+				return { ...parts, dayOfYear };
+			}
+
+			function equationOfTime(dayOfYear) {
+				const B = (2 * Math.PI * (dayOfYear - 81)) / 365;
+				// NOAA approximation in minutes (https://gml.noaa.gov/grad/solcalc/solareqns.PDF)
+				return 9.87 * Math.sin(2 * B) - 7.53 * Math.cos(B) - 1.5 * Math.sin(B);
+			}
+
+			function buildLocalDate(day, minutesFromMidnight, utcOffsetMinutes) {
+				const midnightUtc = Date.UTC(day.year, day.month - 1, day.day, 0, -utcOffsetMinutes);
+				return new Date(midnightUtc + minutesFromMidnight * 60 * 1000);
+			}
+
+			function formatOffset(minutes) {
+				const sign = minutes >= 0 ? '+' : '-';
+				const absolute = Math.abs(minutes);
+				const hrs = Math.floor(absolute / 60)
+					.toString()
+					.padStart(2, '0');
+				const mins = Math.round(absolute % 60)
+					.toString()
+					.padStart(2, '0');
+				return `${sign}${hrs}:${mins}`;
+			}
+
+			function displayResult({ location, timezone, utcOffsetMinutes, eqTime, solarNoonDate, solarNoonMinutes }) {
+				const timeFormatter = new Intl.DateTimeFormat('en-US', {
+					hour: 'numeric',
+					minute: '2-digit',
+					second: '2-digit',
+					timeZone: timezone,
+					hour12: true,
+				});
+				const noonString = timeFormatter.format(solarNoonDate);
+				const deltaFromClockNoon = Math.round(solarNoonMinutes - 720);
+				const direction = deltaFromClockNoon === 0 ? 'exactly at' : deltaFromClockNoon > 0 ? 'after' : 'before';
+				const magnitude = Math.abs(deltaFromClockNoon);
+
+				summaryEl.textContent = `Solar noon is ${direction} 12:00 by ${magnitude} minute${
+					magnitude === 1 ? '' : 's'
+				}, occurring at ${noonString} (${timezone}).`;
+				locationEl.textContent = `${location} (${solarNoonDate.toLocaleDateString('en-US', { timeZone: timezone })})`;
+				timezoneEl.textContent = timezone;
+				offsetEl.textContent = `${formatOffset(utcOffsetMinutes)} from UTC`;
+				eqTimeEl.textContent = `${eqTime.toFixed(1)} minutes`;
+				noonTimeEl.textContent = noonString;
+
+				resultEl?.classList.remove('hidden');
+				enablePlanner({ solarNoonDate, timezone });
+			}
+
+			function enablePlanner({ solarNoonDate, timezone }) {
+				[runSlider, driveSlider].forEach((control) => {
+					if (control) control.disabled = false;
+				});
+
+				const updatePlanner = () => {
+					const runMinutes = Number(runSlider?.value ?? 60);
+					const driveMinutes = Number(driveSlider?.value ?? 0);
+					const hasDrive = driveMinutes > 0;
+
+					syncQueryParams({
+						runDuration: runMinutes,
+						driveDuration: driveMinutes,
+					});
+
+					if (runLabel) runLabel.textContent = `${runMinutes} min`;
+					if (driveLabel) driveLabel.textContent = `${driveMinutes} min`;
+
+					const halfRun = runMinutes / 2;
+					const runStart = addMinutes(solarNoonDate, -halfRun);
+					const runEnd = addMinutes(solarNoonDate, halfRun);
+
+					runStartEl.textContent = formatTime(runStart, timezone);
+					runEndEl.textContent = formatTime(runEnd, timezone);
+
+					if (driveStartBlock && driveEndBlock) {
+						driveStartBlock.style.display = hasDrive ? 'block' : 'none';
+						driveEndBlock.style.display = hasDrive ? 'block' : 'none';
+					}
+
+					updateTimeBlockOrder(hasDrive);
+
+					if (hasDrive) {
+						const depart = addMinutes(runStart, -driveMinutes);
+						const returnDepart = addMinutes(runEnd, driveMinutes);
+						driveStartEl.textContent = formatTime(depart, timezone);
+						driveEndEl.textContent = formatTime(returnDepart, timezone);
+					}
+				};
+
+				runSlider?.addEventListener('input', updatePlanner);
+				driveSlider?.addEventListener('input', updatePlanner);
+				updatePlanner();
+
+				function updateTimeBlockOrder(hasDrive) {
+					const setOrder = (block, order) => {
+						if (block) block.style.order = order.toString();
+					};
+
+					if (hasDrive) {
+						setOrder(driveStartBlock, 0);
+						setOrder(runStartBlock, 1);
+						setOrder(runEndBlock, 2);
+						setOrder(driveEndBlock, 3);
+					} else {
+						setOrder(runStartBlock, 0);
+						setOrder(runEndBlock, 1);
+						setOrder(driveStartBlock, 2);
+						setOrder(driveEndBlock, 3);
+					}
+				}
+			}
+
+			function showStatus(message, intent = 'neutral') {
+				statusEl.textContent = message;
+				statusEl.dataset.intent = intent;
+			}
+
+			function initializeFromQuery(searchParams) {
+				const queryZip = searchParams.get('zip');
+				if (zipInput && queryZip) {
+					zipInput.value = queryZip;
+				}
+
+				const runDuration = parseInt(searchParams.get('runDuration') ?? '', 10);
+				if (runSlider && Number.isFinite(runDuration)) {
+					runSlider.value = clampToRange(runDuration, Number(runSlider.min), Number(runSlider.max)).toString();
+				}
+
+				const driveDuration = parseInt(searchParams.get('driveDuration') ?? '', 10);
+				if (driveSlider && Number.isFinite(driveDuration)) {
+					driveSlider.value = clampToRange(driveDuration, Number(driveSlider.min), Number(driveSlider.max)).toString();
+				}
+			}
+
+			function updateShareMeta(url) {
+				const canonical = document.querySelector('link[rel=\"canonical\"]');
+				if (canonical) {
+					canonical.setAttribute('href', url);
+				}
+
+				const ogUrl = document.querySelector('meta[property=\"og:url\"]');
+				if (ogUrl) {
+					ogUrl.setAttribute('content', url);
+				}
+
+				const twitterUrl = document.querySelector('meta[property=\"twitter:url\"]');
+				if (twitterUrl) {
+					twitterUrl.setAttribute('content', url);
+				}
+			}
+
+			function syncQueryParams({ zip, runDuration, driveDuration } = {}) {
+				const nextParams = new URLSearchParams(window.location.search);
+
+				if (zip !== undefined) {
+					if (zip) {
+						nextParams.set('zip', zip);
+					} else {
+						nextParams.delete('zip');
+					}
+				}
+
+				if (Number.isFinite(runDuration) && runDuration !== defaultRunMinutes) {
+					nextParams.set('runDuration', runDuration.toString());
+				} else {
+					nextParams.delete('runDuration');
+				}
+
+				if (Number.isFinite(driveDuration) && driveDuration !== defaultDriveMinutes) {
+					nextParams.set('driveDuration', driveDuration.toString());
+				} else {
+					nextParams.delete('driveDuration');
+				}
+
+				const query = nextParams.toString();
+				const url = query ? `${window.location.pathname}?${query}` : window.location.pathname;
+				const absoluteUrl = new URL(url, window.location.origin).toString();
+
+				window.history.replaceState({}, '', url);
+				updateShareMeta(absoluteUrl);
+				manifestUpdater.updateManifestStartUrl();
+			}
+
+			function createManifestUpdater() {
+				const manifestLink = document.querySelector('link[rel="manifest"]');
+				let cachedManifest;
+				let objectUrl;
+
+				const cloneManifest = (manifest) => JSON.parse(JSON.stringify(manifest));
+
+				const getManifest = async () => {
+					if (!manifestLink) return null;
+					if (!cachedManifest) {
+						const response = await fetch(manifestLink.href);
+						cachedManifest = await response.json();
+					}
+					return cloneManifest(cachedManifest);
+				};
+
+				const updateManifestStartUrl = async () => {
+					if (!manifestLink) return;
+					try {
+						const manifest = await getManifest();
+						if (!manifest) return;
+
+						const current = new URL(window.location.href);
+						manifest.start_url = `${current.pathname}${current.search}${current.hash}`;
+
+						const blob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
+						const url = URL.createObjectURL(blob);
+						manifestLink.setAttribute('href', url);
+
+						if (objectUrl) URL.revokeObjectURL(objectUrl);
+						objectUrl = url;
+					} catch (error) {
+						console.error('Could not update manifest start_url', error);
+					}
+				};
+
+				window.addEventListener('beforeunload', () => {
+					if (objectUrl) URL.revokeObjectURL(objectUrl);
+				});
+
+				return { updateManifestStartUrl };
+			}
+
+			function addMinutes(date, minutes) {
+				return new Date(date.getTime() + minutes * 60 * 1000);
+			}
+
+			function clampToRange(value, min, max) {
+				return Math.min(max, Math.max(min, value));
+			}
+
+			function formatTime(date, timeZone) {
+				return new Intl.DateTimeFormat('en-US', {
+					hour: 'numeric',
+					minute: '2-digit',
+					second: '2-digit',
+					timeZone,
+					hour12: true,
+				}).format(date);
+			}
+		</script>
+		<style>
+			.page {
+				display: flex;
+				flex-direction: column;
+				gap: 1.5rem;
+				padding: 2rem 1rem 3rem;
+			}
+
+			.hero {
+				background: linear-gradient(120deg, rgba(246, 195, 68, 0.22), rgba(246, 195, 68, 0));
+				border: 1px solid rgba(var(--gray), 0.16);
+				border-radius: 18px;
+				padding: 2rem;
+				box-shadow: var(--box-shadow);
+			}
+
+			.eyebrow {
+				text-transform: uppercase;
+				letter-spacing: 0.12em;
+				font-size: 0.9rem;
+				color: rgb(var(--gray));
+				margin: 0 0 0.35rem;
+			}
+
+			.lede {
+				font-size: 1.15rem;
+				margin-bottom: 1rem;
+			}
+
+			.hero-list {
+				margin: 0;
+				padding-left: 1.2rem;
+				display: grid;
+				gap: 0.3rem;
+			}
+
+			.card {
+				background: white;
+				border-radius: 14px;
+				padding: 1.5rem;
+				box-shadow: var(--box-shadow);
+				border: 1px solid rgba(var(--gray), 0.15);
+			}
+
+			.card--muted {
+				background: linear-gradient(180deg, rgba(var(--accent), 0.18), #fffaf0);
+			}
+
+			.card__header {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				gap: 1rem;
+				margin-bottom: 1rem;
+			}
+
+			.form {
+				display: flex;
+				flex-direction: column;
+				gap: 0.35rem;
+			}
+
+			.input-row {
+				display: flex;
+				gap: 0.5rem;
+				align-items: center;
+				flex-wrap: wrap;
+			}
+
+			input[type='text'],
+			input[type='number'],
+			input[type='search'],
+			input[type='tel'],
+			input[type='email'],
+			input[type='password'],
+			input[type='url'],
+			input:not([type]) {
+				appearance: none;
+				border: 1px solid rgba(var(--gray), 0.4);
+				border-radius: 10px;
+				padding: 0.75rem 0.9rem;
+				font-size: 1rem;
+				flex: 1 1 180px;
+			}
+
+			button {
+				background: var(--accent);
+				color: white;
+				border: none;
+				border-radius: 10px;
+				padding: 0.8rem 1.1rem;
+				font-size: 1rem;
+				cursor: pointer;
+				box-shadow: 0 8px 20px rgba(197, 140, 0, 0.22);
+				transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+			}
+
+			button:hover {
+				transform: translateY(-1px);
+				background: var(--accent-dark);
+			}
+
+			.helper {
+				margin: 0;
+				color: rgb(var(--gray));
+				font-size: 0.95rem;
+			}
+
+			.status {
+				margin-top: 1rem;
+				padding: 0.85rem 1rem;
+				border-radius: 10px;
+				background: rgba(var(--gray-light), 0.6);
+				border: 1px solid rgba(var(--gray), 0.1);
+			}
+
+			.status[data-intent='error'] {
+				background: rgba(255, 59, 48, 0.12);
+				border-color: rgba(255, 59, 48, 0.4);
+				color: #ad1f17;
+			}
+
+			.status[data-intent='loading'] {
+				background: rgba(255, 204, 0, 0.18);
+				border-color: rgba(255, 204, 0, 0.6);
+				color: #5c4200;
+			}
+
+			.status[data-intent='success'] {
+				background: rgba(52, 199, 89, 0.18);
+				border-color: rgba(52, 199, 89, 0.6);
+				color: #0d5c28;
+			}
+
+			.result {
+				margin-top: 1rem;
+				padding: 1rem 1.25rem;
+				border: 1px solid rgba(var(--gray), 0.15);
+				border-radius: 12px;
+				background: linear-gradient(90deg, rgba(var(--gray-light), 0.55), rgba(255, 250, 240, 0.95));
+			}
+
+			.result.hidden {
+				display: none;
+			}
+
+			.result__title {
+				margin: 0 0 0.8rem;
+				font-weight: 700;
+			}
+
+			.meta {
+				margin: 0;
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+				gap: 0.75rem;
+			}
+
+			dt {
+				font-weight: 700;
+				color: rgb(var(--gray-dark));
+			}
+
+			dd {
+				margin: 0.15rem 0 0;
+				color: rgb(var(--gray));
+			}
+
+			.muted {
+				color: rgb(var(--gray));
+			}
+
+			ol {
+				margin: 0;
+				padding-left: 1.4rem;
+				display: grid;
+				gap: 0.5rem;
+			}
+
+			.planner {
+				margin-top: 1.25rem;
+				padding: 1rem 1.25rem;
+				border-radius: 12px;
+				border: 1px solid rgba(var(--gray), 0.15);
+				background: white;
+				display: grid;
+				gap: 1rem;
+			}
+
+			.planner__noon {
+				text-align: center;
+			}
+
+			.noon-time {
+				margin: 0.2rem 0 0;
+				font-size: 2.4rem;
+				font-weight: 800;
+			}
+
+			.controls {
+				display: grid;
+				gap: 0.35rem;
+			}
+
+			.control-row {
+				display: flex;
+				align-items: center;
+				gap: 0.75rem;
+				flex-wrap: wrap;
+			}
+
+			input[type='range'] {
+				flex: 1 1 240px;
+				accent-color: var(--accent);
+			}
+
+			.control-value {
+				min-width: 64px;
+				text-align: right;
+				font-weight: 700;
+				color: rgb(var(--gray-dark));
+			}
+
+			.planner__times {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+				gap: 0.75rem;
+			}
+
+			.time-block {
+				padding: 0.75rem;
+				border-radius: 10px;
+				border: 1px solid rgba(var(--gray), 0.12);
+				background: linear-gradient(180deg, rgba(var(--accent-strong), 0.22), #fffaf0);
+			}
+
+			.time-value {
+				margin: 0.2rem 0 0;
+				font-size: 1.15rem;
+				font-weight: 700;
+			}
+
+			@media (max-width: 720px) {
+				.card,
+				.hero {
+					padding: 1.25rem;
+				}
+			}
+		</style>
 	</body>
 </html>
